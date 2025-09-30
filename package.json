@@ -1,6 +1,6 @@
 {
   "name": "react-native-3rddigital-appupdate",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "A React Native library for seamless over-the-air (OTA) updates with version checks, automatic bundle download, and customizable user prompts for iOS and Android.",
   "main": "./lib/module/index.js",
   "types": "./lib/typescript/src/index.d.ts",
