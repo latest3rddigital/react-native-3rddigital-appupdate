@@ -1,6 +1,6 @@
 {
   "name": "react-native-app-update",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "A React Native library for seamless over-the-air (OTA) updates with version checks, automatic bundle download, and customizable user prompts for iOS and Android.",
   "main": "./lib/module/index.js",
   "types": "./lib/typescript/src/index.d.ts",
