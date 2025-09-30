@@ -1,6 +1,6 @@
 {
-  "name": "react-native-app-update",
-  "version": "1.0.2",
+  "name": "react-native-3rddigital-appupdate",
+  "version": "1.0.0",
   "description": "A React Native library for seamless over-the-air (OTA) updates with version checks, automatic bundle download, and customizable user prompts for iOS and Android.",
   "main": "./lib/module/index.js",
   "types": "./lib/typescript/src/index.d.ts",
@@ -33,7 +33,7 @@
   ],
   "scripts": {
     "build": "bob build",
-    "example": "yarn workspace react-native-app-update-example",
+    "example": "yarn workspace react-native-3rddigital-appupdate-example",
     "test": "jest",
     "typecheck": "tsc",
     "lint": "eslint \"**/*.{js,ts,tsx}\"",
@@ -48,14 +48,14 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/latest3rddigital/react-native-app-update.git"
+    "url": "git+https://github.com/latest3rddigital/react-native-3rddigital-appupdate.git"
   },
-  "author": "Sagar Bhavsar <sagar@3rddigital.com> (https://github.com/latest3rddigital/react-native-app-update)",
+  "author": "Sagar Bhavsar <sagar@3rddigital.com> (https://github.com/latest3rddigital/react-native-3rddigital-appupdate)",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/latest3rddigital/react-native-app-update/issues"
+    "url": "https://github.com/latest3rddigital/react-native-3rddigital-appupdate/issues"
   },
-  "homepage": "https://github.com/latest3rddigital/react-native-app-update#readme",
+  "homepage": "https://github.com/latest3rddigital/react-native-3rddigital-appupdate#readme",
   "publishConfig": {
     "registry": "https://registry.npmjs.org/"
   },

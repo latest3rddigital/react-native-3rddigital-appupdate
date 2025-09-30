@@ -1,4 +1,4 @@
-# react-native-app-update
+# react-native-3rddigital-appupdate
 
 A React Native library for **seamless Over-The-Air (OTA) updates** with:
 
@@ -10,9 +10,9 @@ A React Native library for **seamless Over-The-Air (OTA) updates** with:
 ## 🚀 Installation
 
 ```sh
-npm install react-native-app-update
+npm install react-native-3rddigital-appupdate
 # or
-yarn add react-native-app-update
+yarn add react-native-3rddigital-appupdate
 ```
 
 This package has peer dependencies that also need to be installed:
@@ -34,7 +34,7 @@ cd ios && pod install
 ```sh
 import React, { useEffect } from 'react';
 import { View, Text } from 'react-native';
-import { OTAProvider, checkOTAUpdate } from 'react-native-app-update';
+import { OTAProvider, checkOTAUpdate } from 'react-native-3rddigital-appupdate';
 
 const App = () => {
   useEffect(() => {

@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { Text, View } from 'react-native';
-import { OTAProvider, checkOTAUpdate } from 'react-native-app-update';
+import { OTAProvider, checkOTAUpdate } from 'react-native-3rddigital-appupdate';
 
 const App = () => {
   useEffect(() => {

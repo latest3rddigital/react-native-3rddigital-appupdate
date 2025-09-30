@@ -2,7 +2,7 @@
   "compilerOptions": {
     "rootDir": ".",
     "paths": {
-      "react-native-app-update": ["./src/index"]
+      "react-native-3rddigital-appupdate": ["./src/index"]
     },
     "allowUnreachableCode": false,
     "allowUnusedLabels": false,
