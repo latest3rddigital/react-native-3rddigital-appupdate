@@ -100,18 +100,6 @@ Props (LoaderOptions):
 | `containerStyle`  | ViewStyle | `{}`              | Custom style for the loader container |
 | `textStyle`       | TextStyle | `{}`              | Custom style for the loader text      |
 
-Usage:
-
-```sh
-AppLoader.show({
-  text: "Downloading...",
-  color: "#ff0000",
-  backgroundColor: "rgba(0,0,0,0.6)",
-  textColor: "#fff",
-});
-AppLoader.hide();
-```
-
 🔹 Dialog (AppAlertDialog)
 
 - Global confirmation dialog used to prompt users for updates.
@@ -133,19 +121,6 @@ Props (DialogOptions):
 | `cancelTextStyle`    | TextStyle  | `{}`                | Style override for cancel button text  |
 | `confirmTextStyle`   | TextStyle  | `{}`                | Style override for confirm button text |
 | `overlayColor`       | string     | `'rgba(0,0,0,0.3)'` | Overlay background color               |
-
-Usage:
-
-```sh
-AppAlertDialog.showMessage({
-  title: "Update Available",
-  message: "A new version is ready to install.",
-  confirmText: "Update Now",
-  cancelText: "Later",
-  onConfirm: () => console.log("User confirmed"),
-  onCancel: () => console.log("User cancelled"),
-});
-```
 
 ## 🖥️ CLI Tool – appupdate
 
