@@ -71,21 +71,3 @@ jobs:
 
       - name: Build package
         run: npm run build
-
-  build-web:
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v3
-
-      - name: Setup Node
-        uses: actions/setup-node@v3
-        with:
-          node-version: 20
-
-      - name: Install dependencies
-        run: npm ci --legacy-peer-deps
-
-      - name: Build example for Web
-        run: npm run example -- expo export --platform web
