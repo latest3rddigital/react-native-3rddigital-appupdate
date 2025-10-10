@@ -89,26 +89,32 @@ function buildIOS() {
   return outputPath;
 }
 
-async function getConfig(platform) {
-  console.log(`\n⚙️  Enter configuration for ${platform.toUpperCase()}\n`);
+async function getCommonConfig() {
+  console.log(`\n⚙️  Enter common configuration (applies to both platforms)\n`);
 
   const API_TOKEN = await input({
-    message: `(${platform}) Enter API Token:`,
+    message: `Enter API Token:`,
     validate: (val) => (val.trim() ? true : 'API Token is required'),
   });
 
   const PROJECT_ID = await input({
-    message: `(${platform}) Enter Project ID:`,
+    message: `Enter Project ID:`,
     validate: (val) => (val.trim() ? true : 'Project ID is required'),
   });
 
   const ENVIRONMENT = await select({
-    message: `(${platform}) Select Environment:`,
+    message: `Select Environment:`,
     choices: [
       { name: 'development', value: 'development' },
       { name: 'production', value: 'production' },
     ],
   });
+
+  return { API_TOKEN, PROJECT_ID, ENVIRONMENT };
+}
+
+async function getPlatformSpecificConfig(platform) {
+  console.log(`\n🔧 Enter ${platform.toUpperCase()} specific configuration\n`);
 
   const VERSION = await input({
     message: `(${platform}) Enter App Version (e.g. 1.0.0):`,
@@ -120,13 +126,7 @@ async function getConfig(platform) {
     default: false,
   });
 
-  return {
-    API_TOKEN,
-    PROJECT_ID,
-    ENVIRONMENT,
-    VERSION,
-    FORCE_UPDATE,
-  };
+  return { VERSION, FORCE_UPDATE };
 }
 
 (async () => {
@@ -137,8 +137,11 @@ async function getConfig(platform) {
       process.exit(1);
     }
 
+    const commonConfig = await getCommonConfig();
+
     if (platform === 'android') {
-      const config = await getConfig('android');
+      const androidExtra = await getPlatformSpecificConfig('android');
+      const config = { ...commonConfig, ...androidExtra };
       const androidFile = buildAndroid();
       await uploadBundle({
         filePath: androidFile,
@@ -146,24 +149,25 @@ async function getConfig(platform) {
         config,
       });
     } else if (platform === 'ios') {
-      const config = await getConfig('ios');
+      const iosExtra = await getPlatformSpecificConfig('ios');
+      const config = { ...commonConfig, ...iosExtra };
       const iosFile = buildIOS();
       await uploadBundle({ filePath: iosFile, platform: 'ios', config });
     } else if (platform === 'all') {
-      const androidConfig = await getConfig('android');
+      const androidExtra = await getPlatformSpecificConfig('android');
       const androidFile = buildAndroid();
       await uploadBundle({
         filePath: androidFile,
         platform: 'android',
-        config: androidConfig,
+        config: { ...commonConfig, ...androidExtra },
       });
 
-      const iosConfig = await getConfig('ios');
+      const iosExtra = await getPlatformSpecificConfig('ios');
       const iosFile = buildIOS();
       await uploadBundle({
         filePath: iosFile,
         platform: 'ios',
-        config: iosConfig,
+        config: { ...commonConfig, ...iosExtra },
       });
     } else {
       console.log('❌ Invalid option. Use: android | ios | all');
