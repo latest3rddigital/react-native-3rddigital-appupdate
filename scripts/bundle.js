@@ -34,7 +34,6 @@ async function uploadBundle({ filePath, platform, config }) {
   form.append('environment', config.ENVIRONMENT);
   form.append('platform', platform);
   form.append('version', config.VERSION);
-  form.append('buildNumber', String(config.BUILD_NUMBER));
   form.append('forceUpdate', String(config.FORCE_UPDATE));
 
   try {
@@ -116,12 +115,6 @@ async function getConfig(platform) {
     validate: (val) => (val.trim() ? true : 'Version is required'),
   });
 
-  const BUILD_NUMBER = await input({
-    message: `(${platform}) Enter Build Number:`,
-    validate: (val) =>
-      !isNaN(val) && val.trim() !== '' ? true : 'Must be a number',
-  });
-
   const FORCE_UPDATE = await confirm({
     message: `(${platform}) Force Update?`,
     default: false,
@@ -132,7 +125,6 @@ async function getConfig(platform) {
     PROJECT_ID,
     ENVIRONMENT,
     VERSION,
-    BUILD_NUMBER,
     FORCE_UPDATE,
   };
 }
