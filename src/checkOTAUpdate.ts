@@ -35,8 +35,12 @@ export const checkOTAUpdate = async ({
     const forceUpdate = data?.forceUpdate ?? false;
     const url = data?.url ?? '';
     const bundleId = data?.bundleId ?? '';
+    const currentAppVersion = DeviceInfo.getVersion();
+    const bundleAppVersion = data?.appVersion ?? currentAppVersion;
 
-    if (version <= currentVersion) return;
+    if (version <= currentVersion || currentAppVersion != bundleAppVersion) {
+      return;
+    }
 
     const downloadAndReport = () => {
       AppLoader.show(loaderOptions);

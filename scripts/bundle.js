@@ -8,6 +8,9 @@ const { input, select, confirm } = require('@inquirer/prompts');
 
 const API_BASE_URL = 'https://dev.3rddigital.com/appupdate-api/api/';
 
+/**
+ * Run a shell command synchronously.
+ */
 function run(command) {
   try {
     console.log(`\n➡️ Running: ${command}\n`);
@@ -19,6 +22,9 @@ function run(command) {
   }
 }
 
+/**
+ * Upload bundle file to server.
+ */
 async function uploadBundle({ filePath, platform, config }) {
   console.log(`📤 Uploading ${platform} bundle to server...`);
 
@@ -59,6 +65,9 @@ async function uploadBundle({ filePath, platform, config }) {
   }
 }
 
+/**
+ * Build Android JS bundle and zip it.
+ */
 function buildAndroid() {
   console.log('📦 Building Android bundle...');
   const outputPath = path.join('android', 'index.android.bundle.zip');
@@ -74,6 +83,9 @@ function buildAndroid() {
   return outputPath;
 }
 
+/**
+ * Build iOS JS bundle and zip it.
+ */
 function buildIOS() {
   console.log('📦 Building iOS bundle...');
   const outputPath = path.join('ios', 'main.jsbundle.zip');
@@ -89,6 +101,62 @@ function buildIOS() {
   return outputPath;
 }
 
+/**
+ * Automatically detect app version from native files.
+ */
+function getAppVersion(platform) {
+  try {
+    if (platform === 'android') {
+      // Read Android versionName from build.gradle
+      const gradlePath = path.join(__dirname, 'android', 'app', 'build.gradle');
+      if (!fs.existsSync(gradlePath)) {
+        console.warn('⚠️ Android build.gradle not found.');
+        return null;
+      }
+      const gradleContent = fs.readFileSync(gradlePath, 'utf8');
+      const match = gradleContent.match(/versionName\s+"([\d.]+)"/);
+      if (match && match[1]) {
+        return match[1];
+      } else {
+        console.warn('⚠️ Could not find versionName in build.gradle.');
+      }
+    } else if (platform === 'ios') {
+      // Read MARKETING_VERSION directly from project.pbxproj
+      const iosDir = path.join(__dirname, 'ios');
+      const projectDir = fs
+        .readdirSync(iosDir)
+        .find((d) => d.endsWith('.xcodeproj'));
+
+      if (!projectDir) {
+        console.warn('⚠️ .xcodeproj not found inside ios directory.');
+        return null;
+      }
+
+      const pbxprojPath = path.join(iosDir, projectDir, 'project.pbxproj');
+      if (!fs.existsSync(pbxprojPath)) {
+        console.warn('⚠️ project.pbxproj not found.');
+        return null;
+      }
+
+      const pbxprojContent = fs.readFileSync(pbxprojPath, 'utf8');
+      const match = pbxprojContent.match(/MARKETING_VERSION\s*=\s*([\d.]+);/);
+
+      if (match && match[1]) {
+        return match[1];
+      } else {
+        console.warn('⚠️ Could not find MARKETING_VERSION in project.pbxproj.');
+      }
+    }
+  } catch (err) {
+    console.warn(`⚠️ Failed to read ${platform} version:`, err.message);
+  }
+
+  return null;
+}
+
+/**
+ * Get common configuration (API token, project ID, env).
+ */
 async function getCommonConfig() {
   console.log(`\n⚙️  Enter common configuration (applies to both platforms)\n`);
 
@@ -113,22 +181,34 @@ async function getCommonConfig() {
   return { API_TOKEN, PROJECT_ID, ENVIRONMENT };
 }
 
+/**
+ * Get platform-specific configuration with version auto-detection.
+ */
 async function getPlatformSpecificConfig(platform) {
-  console.log(`\n🔧 Enter ${platform.toUpperCase()} specific configuration\n`);
+  console.log(`\n🔧 Configuring ${platform.toUpperCase()}...\n`);
 
-  const VERSION = await input({
-    message: `(${platform}) Enter App Version (e.g. 1.0.0):`,
-    validate: (val) => (val.trim() ? true : 'Version is required'),
-  });
+  let detectedVersion = getAppVersion(platform);
+  if (detectedVersion) {
+    console.log(`📱 Detected ${platform} version: ${detectedVersion}`);
+  } else {
+    console.warn(`⚠️ Could not detect ${platform} version automatically.`);
+    detectedVersion = await input({
+      message: `(${platform}) Enter App Version (e.g. 1.0.0):`,
+      validate: (val) => (val.trim() ? true : 'Version is required'),
+    });
+  }
 
   const FORCE_UPDATE = await confirm({
     message: `(${platform}) Force Update?`,
     default: false,
   });
 
-  return { VERSION, FORCE_UPDATE };
+  return { VERSION: detectedVersion, FORCE_UPDATE };
 }
 
+/**
+ * Entry point
+ */
 (async () => {
   try {
     const platform = process.argv[2];
