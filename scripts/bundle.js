@@ -106,11 +106,29 @@ function buildIOS() {
  */
 function getAppVersion(platform) {
   try {
+    // Find the actual React Native project root (two levels up from node_modules)
+    let projectRoot = path.resolve(__dirname);
+    while (
+      projectRoot.includes('node_modules') &&
+      !fs.existsSync(path.join(projectRoot, 'package.json'))
+    ) {
+      projectRoot = path.resolve(projectRoot, '..');
+    }
+
+    // Once we exit node_modules, ensure we’re at the React Native app root
+    if (projectRoot.includes('node_modules')) {
+      projectRoot = path.resolve(projectRoot, '../../');
+    }
+
     if (platform === 'android') {
-      // Read Android versionName from build.gradle
-      const gradlePath = path.join(__dirname, 'android', 'app', 'build.gradle');
+      const gradlePath = path.join(
+        projectRoot,
+        'android',
+        'app',
+        'build.gradle'
+      );
       if (!fs.existsSync(gradlePath)) {
-        console.warn('⚠️ Android build.gradle not found.');
+        console.warn(`⚠️ Android build.gradle not found at ${gradlePath}`);
         return null;
       }
       const gradleContent = fs.readFileSync(gradlePath, 'utf8');
@@ -121,8 +139,12 @@ function getAppVersion(platform) {
         console.warn('⚠️ Could not find versionName in build.gradle.');
       }
     } else if (platform === 'ios') {
-      // Read MARKETING_VERSION directly from project.pbxproj
-      const iosDir = path.join(__dirname, 'ios');
+      const iosDir = path.join(projectRoot, 'ios');
+      if (!fs.existsSync(iosDir)) {
+        console.warn(`⚠️ iOS folder not found at ${iosDir}`);
+        return null;
+      }
+
       const projectDir = fs
         .readdirSync(iosDir)
         .find((d) => d.endsWith('.xcodeproj'));
