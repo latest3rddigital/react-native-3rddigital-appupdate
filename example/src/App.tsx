@@ -10,6 +10,7 @@ const App = () => {
       androidPackage: 'com.example.android',
       loaderOptions: {
         text: 'Downloading update...',
+        showProgress: true,
       },
       dialogOptions: {
         title: 'Update Available',

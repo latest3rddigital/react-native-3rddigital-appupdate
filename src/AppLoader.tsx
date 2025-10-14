@@ -15,22 +15,32 @@ export type LoaderOptions = {
   textColor?: string;
   containerStyle?: ViewStyle;
   textStyle?: TextStyle;
+  progressTextStyle?: TextStyle;
+  showProgress?: boolean;
 };
 
 let showLoader: (options?: LoaderOptions) => void;
 let hideLoader: () => void;
+let updateProgressValue: (progress: number) => void;
 
 export const AppLoader = () => {
   const [visible, setVisible] = useState(false);
   const [options, setOptions] = useState<LoaderOptions>({});
+  const [progress, setProgress] = useState(0);
 
   showLoader = (opts?: LoaderOptions) => {
     setOptions(opts || {});
+    setProgress(0);
     setVisible(true);
   };
 
   hideLoader = () => {
     setVisible(false);
+    setProgress(0);
+  };
+
+  updateProgressValue = (value: number) => {
+    setProgress(value);
   };
 
   if (!visible) return null;
@@ -55,6 +65,17 @@ export const AppLoader = () => {
             {options.text}
           </Text>
         )}
+        {options.showProgress && (
+          <Text
+            style={[
+              styles.progressText,
+              { color: options.textColor || '#fff' },
+              options.progressTextStyle,
+            ]}
+          >
+            {progress.toFixed(0)}%
+          </Text>
+        )}
       </View>
     </View>
   );
@@ -77,8 +98,17 @@ const styles = StyleSheet.create({
     marginTop: 12,
     fontSize: 14,
     fontWeight: '500',
+    textAlign: 'center',
+  },
+  progressText: {
+    marginTop: 10,
+    fontSize: 13,
+    fontWeight: '600',
+    textAlign: 'center',
   },
 });
 
 AppLoader.show = (options?: LoaderOptions) => showLoader?.(options);
 AppLoader.hide = () => hideLoader?.();
+AppLoader.updateProgress = (progress: number) =>
+  updateProgressValue?.(progress);

@@ -44,6 +44,7 @@ const App = () => {
       androidPackage: 'com.example.android',
       loaderOptions: {
         text: 'Downloading update...',
+        showProgress: true,
       },
       dialogOptions: {
         title: 'Update Available',
@@ -91,14 +92,16 @@ Options:
 
 Props (LoaderOptions):
 
-| Key               | Type      | Default           | Description                           |
-| ----------------- | --------- | ----------------- | ------------------------------------- |
-| `text`            | string    | `undefined`       | Text displayed below the spinner      |
-| `color`           | string    | `#2563EB`         | Spinner color                         |
-| `backgroundColor` | string    | `rgba(0,0,0,0.3)` | Overlay background color              |
-| `textColor`       | string    | `#fff`            | Loader text color                     |
-| `containerStyle`  | ViewStyle | `{}`              | Custom style for the loader container |
-| `textStyle`       | TextStyle | `{}`              | Custom style for the loader text      |
+| Key                 | Type      | Default           | Description                                     |
+| ------------------- | --------- | ----------------- | ----------------------------------------------- |
+| `text`              | string    | `undefined`       | Text displayed below the spinner                |
+| `color`             | string    | `#2563EB`         | Spinner color                                   |
+| `backgroundColor`   | string    | `rgba(0,0,0,0.3)` | Overlay background color                        |
+| `textColor`         | string    | `#fff`            | Loader text color                               |
+| `containerStyle`    | ViewStyle | `{}`              | Custom style for the loader container           |
+| `textStyle`         | TextStyle | `{}`              | Custom style for the loader text                |
+| `progressTextStyle` | TextStyle | `{}`              | Custom style for the loader progress text       |
+| `showProgress`      | boolean   | `false`           | Show real-time download percentage (e.g. “45%”) |
 
 🔹 Dialog (AppAlertDialog)
 

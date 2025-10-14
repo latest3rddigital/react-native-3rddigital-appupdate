@@ -45,6 +45,15 @@ export const checkOTAUpdate = async ({
     const downloadAndReport = () => {
       AppLoader.show(loaderOptions);
       hotUpdate.downloadBundleUri(ReactNativeBlobUtil, url, version, {
+        progress: (received, total) => {
+          if (loaderOptions?.showProgress) {
+            const percentage = (
+              (Number(received) / Number(total)) *
+              100
+            ).toFixed(1);
+            AppLoader.updateProgress(Number(percentage));
+          }
+        },
         updateSuccess: () => {
           axios
             .post(
