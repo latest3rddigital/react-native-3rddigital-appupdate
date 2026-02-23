@@ -39,6 +39,7 @@ import { OTAProvider, checkOTAUpdate } from 'react-native-3rddigital-appupdate';
 const App = () => {
   useEffect(() => {
     checkOTAUpdate({
+      baseUrl: 'https://your-api-url.com',
       key: 'YOUR_PROJECT_KEY',
       iosPackage: 'com.example.ios',
       androidPackage: 'com.example.android',
@@ -75,6 +76,7 @@ Options:
 
 | Key              | Type   | Required | Description                                           |
 | ---------------- | ------ | -------- | ----------------------------------------------------- |
+| `baseUrl`        | string | ✅       | Base url for app update                               |
 | `key`            | string | ✅       | Project key to identify the app on your update server |
 | `iosPackage`     | string | ✅       | iOS bundle/package identifier                         |
 | `androidPackage` | string | ✅       | Android bundle/package identifier                     |
