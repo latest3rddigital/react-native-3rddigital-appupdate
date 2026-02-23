@@ -6,14 +6,13 @@ import hotUpdate from 'react-native-ota-hot-update';
 import { AppAlertDialog, type DialogOptions } from './AppAlertDialog';
 import { AppLoader, type LoaderOptions } from './AppLoader';
 
-const API_URL = 'https://dev.3rddigital.com/appupdate-api/api/';
-
 export type OTAUpdateProps = {
   key: string;
   iosPackage: string;
   androidPackage: string;
   loaderOptions?: LoaderOptions;
   dialogOptions?: Omit<DialogOptions, 'onConfirm' | 'onCancel'>;
+  baseUrl: string;
 };
 
 export const checkOTAUpdate = async ({
@@ -22,8 +21,10 @@ export const checkOTAUpdate = async ({
   androidPackage,
   loaderOptions,
   dialogOptions,
+  baseUrl,
 }: OTAUpdateProps) => {
   try {
+    const API_URL = baseUrl;
     const response = await axios.get(
       `${API_URL}projects/get-bundle?key=${key}&iosPackage=${iosPackage}&androidPackage=${androidPackage}`
     );
@@ -38,7 +39,7 @@ export const checkOTAUpdate = async ({
     const currentAppVersion = DeviceInfo.getVersion();
     const bundleAppVersion = data?.appVersion ?? currentAppVersion;
 
-    if (version <= currentVersion || currentAppVersion != bundleAppVersion) {
+    if (version <= currentVersion || currentAppVersion !== bundleAppVersion) {
       return;
     }
 

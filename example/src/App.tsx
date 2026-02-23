@@ -5,6 +5,7 @@ import { OTAProvider, checkOTAUpdate } from 'react-native-3rddigital-appupdate';
 const App = () => {
   useEffect(() => {
     checkOTAUpdate({
+      baseUrl: 'https://your-api-url.com',
       key: 'YOUR_PROJECT_KEY',
       iosPackage: 'com.example.ios',
       androidPackage: 'com.example.android',

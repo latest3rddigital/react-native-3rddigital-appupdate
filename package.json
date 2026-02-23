@@ -157,12 +157,15 @@
     "version": "0.54.3"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.995.0",
     "@inquirer/prompts": "^7.8.6",
     "axios": "^1.12.2",
+    "dotenv": "^17.3.1",
     "form-data": "^4.0.4",
     "react-native-blob-util": "^0.22.2",
     "react-native-device-info": "^14.1.1",
-    "react-native-ota-hot-update": "^2.3.4"
+    "react-native-ota-hot-update": "^2.3.4",
+    "uuid": "^13.0.0"
   },
   "bin": {
     "appupdate": "./scripts/bundle.js"
