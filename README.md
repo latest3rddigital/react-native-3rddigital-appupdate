@@ -151,7 +151,7 @@ What it does
 
 - Bundles your React Native JS + assets
 - Zips the output
-- Uploads bundle + metadata to your update server (https://dev.3rddigital.com/appupdate-api/api/)
+- Uploads bundle + metadata to your update server
 
 ## 📄 License
 
