@@ -169,25 +169,6 @@ function findFirstXcodeProj(dir) {
   return null;
 }
 
-function walkFiles(dir, matcher, result = []) {
-  if (!fs.existsSync(dir)) return result;
-
-  const entries = fs.readdirSync(dir, { withFileTypes: true });
-  for (const entry of entries) {
-    const fullPath = path.join(dir, entry.name);
-    if (entry.isDirectory()) {
-      walkFiles(fullPath, matcher, result);
-      continue;
-    }
-
-    if (matcher(fullPath)) {
-      result.push(fullPath);
-    }
-  }
-
-  return result;
-}
-
 function extractBracedBlock(content, startIndex) {
   const openIndex = content.indexOf('{', startIndex);
   if (openIndex === -1) return null;
@@ -553,12 +534,6 @@ function getIosTargetMetadata() {
           .map((configId) => configMap.get(configId))
           .filter(Boolean) ?? [];
 
-      const configsByName = new Map(
-        buildConfigs
-          .filter((config) => config.name)
-          .map((config) => [config.name, config])
-      );
-
       const preferredConfig =
         buildConfigs.find(
           (config) => config.name === configList?.defaultName
@@ -568,14 +543,17 @@ function getIosTargetMetadata() {
 
       if (!preferredConfig) return null;
 
+      const buildConfigurationLabel = preferredConfig.name
+        ? ` [${preferredConfig.name}]`
+        : '';
+
       return {
         name: targetName,
-        label: targetName,
+        label: `${targetName}${buildConfigurationLabel}`,
         appId: preferredConfig.appId ?? null,
         version: preferredConfig.version ?? null,
         productName: preferredConfig.productName ?? targetName,
         buildConfiguration: preferredConfig.name ?? null,
-        configsByName,
       };
     })
     .filter(Boolean);
@@ -587,133 +565,38 @@ function getIosTargetMetadata() {
   );
 
   return {
-    projectFiles,
     defaultConfig: uniqueTargets[0] ?? null,
     targets: uniqueTargets,
   };
 }
 
-function parseSchemeFile(filePath) {
-  const content = fs.readFileSync(filePath, 'utf8');
-  const schemeName = path.basename(filePath, '.xcscheme');
-
-  const blueprintName =
-    content.match(/BlueprintName\s*=\s*"([^"]+)"/)?.[1] ?? schemeName;
-  const buildConfiguration =
-    content.match(
-      /ArchiveAction[^>]*buildConfiguration\s*=\s*"([^"]+)"/
-    )?.[1] ??
-    content.match(/LaunchAction[^>]*buildConfiguration\s*=\s*"([^"]+)"/)?.[1] ??
-    content.match(
-      /ProfileAction[^>]*buildConfiguration\s*=\s*"([^"]+)"/
-    )?.[1] ??
-    'Release';
-
-  return {
-    scheme: schemeName,
-    targetName: blueprintName,
-    buildConfiguration,
-  };
-}
-
-function getIosSchemeMetadata() {
-  const iosMetadata = getIosTargetMetadata();
-  if (!iosMetadata) return null;
-
-  const schemeFiles = walkFiles(iosMetadata.projectFiles.iosDir, (filePath) =>
-    filePath.endsWith('.xcscheme')
-  );
-
-  const targetsByName = new Map(
-    iosMetadata.targets.map((target) => [target.name, target])
-  );
-
-  const schemes = schemeFiles
-    .map(parseSchemeFile)
-    .map((scheme) => {
-      const target = targetsByName.get(scheme.targetName);
-      if (!target) return null;
-
-      const config = target.configsByName.get(scheme.buildConfiguration) ??
-        target.configsByName.get('Release') ?? {
-          appId: target.appId,
-          version: target.version,
-          productName: target.productName,
-          name: target.buildConfiguration,
-        };
-
-      return {
-        name: scheme.scheme,
-        label: scheme.scheme,
-        targetName: target.name,
-        buildConfiguration: scheme.buildConfiguration,
-        appId: config.appId ?? target.appId ?? null,
-        version: config.version ?? target.version ?? null,
-        productName: config.productName ?? target.productName,
-      };
-    })
-    .filter(Boolean);
-
-  const schemesByTargetName = new Map(
-    schemes.map((scheme) => [scheme.targetName, scheme])
-  );
-
-  const mergedSchemes = iosMetadata.targets.map((target) => {
-    const matchedScheme = schemesByTargetName.get(target.name);
-    if (matchedScheme) {
-      return matchedScheme;
-    }
-
-    return {
-      name: target.name,
-      label: `${target.label}${target.buildConfiguration ? ` [${target.buildConfiguration}]` : ''}`,
-      targetName: target.name,
-      buildConfiguration: target.buildConfiguration,
-      appId: target.appId,
-      version: target.version,
-      productName: target.productName,
-    };
-  });
-
-  const uniqueSchemes = mergedSchemes.filter(
-    (scheme, index, allSchemes) =>
-      allSchemes.findIndex((candidate) => candidate.name === scheme.name) ===
-      index
-  );
-
-  return {
-    defaultConfig: uniqueSchemes[0] ?? iosMetadata.defaultConfig,
-    schemes: uniqueSchemes,
-  };
-}
-
-async function getIosSchemeSelection() {
-  const metadata = getIosSchemeMetadata();
+async function getIosTargetSelection() {
+  const metadata = getIosTargetMetadata();
   if (!metadata) return null;
 
-  if (metadata.schemes.length <= 1) {
+  if (metadata.targets.length <= 1) {
     return metadata.defaultConfig;
   }
 
-  let selectedScheme;
-  let isSchemeConfirmed = false;
+  let selectedTarget;
+  let isTargetConfirmed = false;
 
-  while (!isSchemeConfirmed) {
-    selectedScheme = await select({
-      message: 'Select iOS scheme:',
-      choices: metadata.schemes.map((scheme) => ({
-        name: `${scheme.label} (${scheme.appId ?? 'unknown app id'} / ${scheme.version ?? 'unknown version'})`,
-        value: scheme,
+  while (!isTargetConfirmed) {
+    selectedTarget = await select({
+      message: 'Select iOS target:',
+      choices: metadata.targets.map((target) => ({
+        name: `${target.label} (${target.appId ?? 'unknown app id'} / ${target.version ?? 'unknown version'})`,
+        value: target,
       })),
     });
 
-    isSchemeConfirmed = await confirm({
-      message: `Continue with iOS scheme ${selectedScheme.label ?? selectedScheme.name}?`,
+    isTargetConfirmed = await confirm({
+      message: `Continue with iOS target ${selectedTarget.label ?? selectedTarget.name}?`,
       default: true,
     });
   }
 
-  return selectedScheme;
+  return selectedTarget;
 }
 
 function getPlatformAppVersion(platform, selection) {
@@ -725,7 +608,7 @@ function getPlatformAppVersion(platform, selection) {
   }
 
   if (platform === 'ios') {
-    const metadata = getIosSchemeMetadata();
+    const metadata = getIosTargetMetadata();
     return metadata?.defaultConfig.version ?? null;
   }
 
@@ -773,7 +656,7 @@ async function getPlatformConfig(platform) {
     platform === 'android'
       ? await getAndroidFlavorSelection()
       : platform === 'ios'
-        ? await getIosSchemeSelection()
+        ? await getIosTargetSelection()
         : null;
 
   if (platform === 'android' && selection?.label) {
@@ -784,7 +667,7 @@ async function getPlatformConfig(platform) {
 
   if (platform === 'ios' && selection?.label) {
     console.log(
-      `🍎 Selected iOS scheme: ${selection.label} (${selection.appId ?? 'unknown app id'})`
+      `🍎 Selected iOS target: ${selection.label} (${selection.appId ?? 'unknown app id'})`
     );
   }
 
