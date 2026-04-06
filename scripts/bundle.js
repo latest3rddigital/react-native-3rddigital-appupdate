@@ -486,6 +486,7 @@ function getIosTargetMetadata() {
     configObjects.map((config) => [
       config.id,
       {
+        id: config.id,
         name: cleanPbxString(readPbxValue(config.body, 'name')),
         version: cleanPbxString(readPbxValue(config.body, 'MARKETING_VERSION')),
         appId: cleanPbxString(
@@ -545,27 +546,42 @@ function getIosTargetMetadata() {
 
       if (!buildConfigs.length) return null;
 
-      const configsByIdentity = new Map();
+      const buildConfigsWithAppId = buildConfigs.filter(
+        (config) => config.appId
+      );
 
-      for (const buildConfig of buildConfigs) {
-        const identity = `${buildConfig.appId ?? 'no-app-id'}::${buildConfig.name ?? 'no-config-name'}`;
-        if (!configsByIdentity.has(identity)) {
-          configsByIdentity.set(identity, []);
+      const configsByAppId = new Map();
+      for (const buildConfig of buildConfigsWithAppId) {
+        const appIdKey = buildConfig.appId;
+        if (!configsByAppId.has(appIdKey)) {
+          configsByAppId.set(appIdKey, []);
         }
 
-        configsByIdentity.get(identity).push(buildConfig);
+        configsByAppId.get(appIdKey).push(buildConfig);
       }
 
-      const distinctConfigs = Array.from(configsByIdentity.values())
-        .map((configGroup) =>
-          choosePreferredBuildConfig(configGroup, [
-            configList?.defaultName,
-            'Release',
-            'Profile',
-            'Debug',
-          ])
-        )
-        .filter(Boolean);
+      const preferredConfigNames = [
+        configList?.defaultName,
+        'Release',
+        'Profile',
+        'Debug',
+      ].filter(Boolean);
+
+      const distinctConfigs =
+        configsByAppId.size <= 1
+          ? [
+              choosePreferredBuildConfig(
+                buildConfigsWithAppId.length
+                  ? buildConfigsWithAppId
+                  : buildConfigs,
+                preferredConfigNames
+              ),
+            ].filter(Boolean)
+          : Array.from(configsByAppId.values())
+              .map((configGroup) =>
+                choosePreferredBuildConfig(configGroup, preferredConfigNames)
+              )
+              .filter(Boolean);
 
       return distinctConfigs.map((selectedConfig) => {
         const buildConfigurationLabel = selectedConfig.name
@@ -577,7 +593,7 @@ function getIosTargetMetadata() {
           : '';
 
         return {
-          name: `${targetName}::${selectedConfig.name ?? 'default'}::${selectedConfig.appId ?? 'no-app-id'}`,
+          name: `${targetName}::${selectedConfig.appId ?? selectedConfig.id ?? 'no-app-id'}`,
           targetName,
           label: `${targetName}${buildConfigurationLabel}${appIdLabel}`,
           appId: selectedConfig.appId ?? null,
@@ -592,11 +608,11 @@ function getIosTargetMetadata() {
 
   const uniqueTargets = targets.filter(
     (target, index, allTargets) =>
-      allTargets.findIndex(
-        (candidate) =>
-          candidate.targetName === target.targetName &&
-          candidate.appId === target.appId &&
-          candidate.buildConfiguration === target.buildConfiguration
+      allTargets.findIndex((candidate) =>
+        candidate.appId
+          ? candidate.appId === target.appId
+          : candidate.targetName === target.targetName &&
+            candidate.buildConfiguration === target.buildConfiguration
       ) === index
   );
 
