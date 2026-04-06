@@ -33,25 +33,42 @@ cd ios && pod install
 
 ```sh
 import React, { useEffect } from 'react';
-import { View, Text } from 'react-native';
-import { OTAProvider, checkOTAUpdate } from 'react-native-3rddigital-appupdate';
+import { Alert, View, Text } from 'react-native';
+import {
+  OTAProvider,
+  checkOTAUpdate,
+  consumeOTAUpdateSuccessState,
+} from 'react-native-3rddigital-appupdate';
 
 const App = () => {
   useEffect(() => {
-    checkOTAUpdate({
-      baseUrl: 'https://your-api-url.com',
-      key: 'YOUR_PROJECT_KEY',
-      iosPackage: 'com.example.ios',
-      androidPackage: 'com.example.android',
-      loaderOptions: {
-        text: 'Downloading update...',
-        showProgress: true,
-      },
-      dialogOptions: {
-        title: 'Update Available',
-        message: 'A new version is ready to install.',
-      },
-    });
+    const initializeOTAUpdate = async () => {
+      const updateState = await consumeOTAUpdateSuccessState();
+
+      if (updateState) {
+        Alert.alert(
+          'Update successful',
+          `OTA bundle v${updateState.version} is now active.`
+        );
+      }
+
+      await checkOTAUpdate({
+        baseUrl: 'https://your-api-url.com',
+        key: 'YOUR_PROJECT_KEY',
+        iosPackage: 'com.example.ios',
+        androidPackage: 'com.example.android',
+        loaderOptions: {
+          text: 'Downloading update...',
+          showProgress: true,
+        },
+        dialogOptions: {
+          title: 'Update Available',
+          message: 'A new version is ready to install.',
+        },
+      });
+    };
+
+    void initializeOTAUpdate();
   }, []);
 
   return (
@@ -65,6 +82,8 @@ const App = () => {
 
 export default App;
 ```
+
+If you already use a toast library, replace `Alert.alert(...)` with your toast call. The important part is calling `consumeOTAUpdateSuccessState()` once when the app starts so you can show a success message after the OTA-triggered reload.
 
 ## ⚙️ API Reference
 
@@ -87,6 +106,20 @@ Options:
 
 - Renders background components (AppLoader, AppAlertDialog) that handle UI for downloads and update prompts.
 - Must be included once, usually at the root of your app.
+
+🔹 consumeOTAUpdateSuccessState()
+
+- Reads the one-time OTA success marker saved before app reload and clears it immediately after reading.
+- Use this during app startup to show a success toast or alert after a bundle installs successfully.
+
+Returns:
+
+| Key           | Type     | Description                               |
+| ------------- | -------- | ----------------------------------------- |
+| `bundleId`    | string   | Bundle identifier returned by your server |
+| `version`     | number   | Installed OTA bundle version              |
+| `appVersion`  | string   | Native app version associated with bundle |
+| `installedAt` | string   | ISO timestamp when install completed      |
 
 🔹 Loader (AppLoader)
 

@@ -15,6 +15,66 @@ export type OTAUpdateProps = {
   baseUrl: string;
 };
 
+export type OTAUpdateSuccessState = {
+  bundleId: string;
+  version: number;
+  appVersion: string;
+  installedAt: string;
+};
+
+const OTA_UPDATE_SUCCESS_FILE = `${ReactNativeBlobUtil.fs.dirs.CacheDir}/ota-update-success.json`;
+
+const persistOTAUpdateSuccessState = async (state: OTAUpdateSuccessState) => {
+  try {
+    await ReactNativeBlobUtil.fs.writeFile(
+      OTA_UPDATE_SUCCESS_FILE,
+      JSON.stringify(state),
+      'utf8'
+    );
+  } catch (error) {
+    console.warn('Failed to persist OTA update success state:', error);
+  }
+};
+
+const readOTAUpdateSuccessState = async () => {
+  try {
+    const exists = await ReactNativeBlobUtil.fs.exists(OTA_UPDATE_SUCCESS_FILE);
+
+    if (!exists) {
+      return null;
+    }
+
+    const content = await ReactNativeBlobUtil.fs.readFile(
+      OTA_UPDATE_SUCCESS_FILE,
+      'utf8'
+    );
+    return JSON.parse(content) as OTAUpdateSuccessState;
+  } catch (error) {
+    console.warn('Failed to read OTA update success state:', error);
+    return null;
+  }
+};
+
+export const consumeOTAUpdateSuccessState = async () => {
+  const state = await readOTAUpdateSuccessState();
+
+  if (!state) {
+    return null;
+  }
+
+  try {
+    const exists = await ReactNativeBlobUtil.fs.exists(OTA_UPDATE_SUCCESS_FILE);
+
+    if (exists) {
+      await ReactNativeBlobUtil.fs.unlink(OTA_UPDATE_SUCCESS_FILE);
+    }
+  } catch (error) {
+    console.warn('Failed to clear OTA update success state:', error);
+  }
+
+  return state;
+};
+
 export const checkOTAUpdate = async ({
   key,
   iosPackage,
@@ -56,13 +116,27 @@ export const checkOTAUpdate = async ({
           }
         },
         updateSuccess: () => {
-          axios
-            .post(
-              `${API_URL}bundles/${bundleId}/count`,
-              { status: 'success' },
-              { headers: { 'Content-Type': 'application/json' } }
-            )
-            .finally(() => AppLoader.hide());
+          persistOTAUpdateSuccessState({
+            bundleId,
+            version,
+            appVersion: bundleAppVersion,
+            installedAt: new Date().toISOString(),
+          })
+            .finally(() => {
+              axios
+                .post(
+                  `${API_URL}bundles/${bundleId}/count`,
+                  { status: 'success' },
+                  { headers: { 'Content-Type': 'application/json' } }
+                )
+                .finally(() => AppLoader.hide());
+            })
+            .catch((error) => {
+              console.warn(
+                'Failed to finalize OTA update success handling:',
+                error
+              );
+            });
         },
         updateFail: (error) => {
           axios
