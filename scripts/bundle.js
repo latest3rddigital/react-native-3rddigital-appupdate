@@ -580,10 +580,16 @@ function getIosTargetMetadata() {
     })
     .filter(Boolean);
 
+  const uniqueTargets = targets.filter(
+    (target, index, allTargets) =>
+      allTargets.findIndex((candidate) => candidate.name === target.name) ===
+      index
+  );
+
   return {
     projectFiles,
-    defaultConfig: targets[0] ?? null,
-    targets,
+    defaultConfig: uniqueTargets[0] ?? null,
+    targets: uniqueTargets,
   };
 }
 
@@ -648,29 +654,35 @@ function getIosSchemeMetadata() {
     })
     .filter(Boolean);
 
-  if (!schemes.length) {
-    return {
-      defaultConfig: iosMetadata.defaultConfig,
-      schemes: iosMetadata.targets.map((target) => ({
-        name: target.name,
-        label: target.label,
-        targetName: target.name,
-        buildConfiguration: target.buildConfiguration,
-        appId: target.appId,
-        version: target.version,
-        productName: target.productName,
-      })),
-    };
-  }
+  const schemesByTargetName = new Map(
+    schemes.map((scheme) => [scheme.targetName, scheme])
+  );
 
-  const uniqueSchemes = schemes.filter(
+  const mergedSchemes = iosMetadata.targets.map((target) => {
+    const matchedScheme = schemesByTargetName.get(target.name);
+    if (matchedScheme) {
+      return matchedScheme;
+    }
+
+    return {
+      name: target.name,
+      label: `${target.label}${target.buildConfiguration ? ` [${target.buildConfiguration}]` : ''}`,
+      targetName: target.name,
+      buildConfiguration: target.buildConfiguration,
+      appId: target.appId,
+      version: target.version,
+      productName: target.productName,
+    };
+  });
+
+  const uniqueSchemes = mergedSchemes.filter(
     (scheme, index, allSchemes) =>
       allSchemes.findIndex((candidate) => candidate.name === scheme.name) ===
       index
   );
 
   return {
-    defaultConfig: uniqueSchemes[0],
+    defaultConfig: uniqueSchemes[0] ?? iosMetadata.defaultConfig,
     schemes: uniqueSchemes,
   };
 }
