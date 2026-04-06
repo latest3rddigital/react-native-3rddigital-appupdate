@@ -169,6 +169,54 @@ function findFirstXcodeProj(dir) {
   return null;
 }
 
+function findFirstXcworkspace(dir) {
+  const files = fs.readdirSync(dir);
+
+  for (const file of files) {
+    const fullPath = path.join(dir, file);
+    const stat = fs.statSync(fullPath);
+
+    if (stat.isDirectory()) {
+      if (file.endsWith('.xcworkspace') && file !== 'Pods.xcworkspace') {
+        return fullPath;
+      }
+      const nested = findFirstXcworkspace(fullPath);
+      if (nested) return nested;
+    }
+  }
+
+  return null;
+}
+
+function quoteShellArg(value) {
+  return `'${String(value).replace(/'/g, `'\\''`)}'`;
+}
+
+function runAndCapture(command, cwd = process.cwd()) {
+  try {
+    return execSync(command, {
+      cwd,
+      stdio: ['ignore', 'pipe', 'pipe'],
+    })
+      .toString()
+      .trim();
+  } catch (_error) {
+    return null;
+  }
+}
+
+function extractJsonObject(text) {
+  if (!text) return null;
+
+  const start = text.indexOf('{');
+  const end = text.lastIndexOf('}');
+  if (start === -1 || end === -1 || end <= start) {
+    return null;
+  }
+
+  return text.slice(start, end + 1);
+}
+
 function extractBracedBlock(content, startIndex) {
   const openIndex = content.indexOf('{', startIndex);
   if (openIndex === -1) return null;
@@ -472,18 +520,133 @@ function getIosProjectFiles() {
     return null;
   }
 
+  const xcworkspacePath = findFirstXcworkspace(iosDir);
+
   const pbxprojPath = path.join(xcodeProjPath, 'project.pbxproj');
   if (!fs.existsSync(pbxprojPath)) {
     console.warn('⚠️ project.pbxproj not found.');
     return null;
   }
 
-  return { iosDir, xcodeProjPath, pbxprojPath };
+  return { iosDir, xcodeProjPath, xcworkspacePath, pbxprojPath };
+}
+
+function getIosBuildContainerArgs(projectFiles) {
+  if (projectFiles.xcworkspacePath) {
+    return `-workspace ${quoteShellArg(projectFiles.xcworkspacePath)}`;
+  }
+
+  return `-project ${quoteShellArg(projectFiles.xcodeProjPath)}`;
+}
+
+function parseXcodebuildSettings(output) {
+  const settings = {};
+
+  for (const line of output.split('\n')) {
+    const match = line.match(/^\s*([A-Za-z0-9_]+)\s*=\s*(.+)$/);
+    if (!match) continue;
+    settings[match[1]] = cleanPbxString(match[2]);
+  }
+
+  return settings;
+}
+
+function isResolvedBuildSetting(value) {
+  if (!value) return false;
+
+  return !/[()$]/.test(value);
+}
+
+function getIosSchemeMetadataFromXcodebuild(projectFiles) {
+  const projectRoot = getProjectRoot();
+  const buildContainerArgs = getIosBuildContainerArgs(projectFiles);
+  const listOutput = runAndCapture(
+    `xcodebuild -list -json ${buildContainerArgs}`,
+    projectRoot
+  );
+
+  if (!listOutput) return null;
+
+  try {
+    const jsonOutput = extractJsonObject(listOutput);
+    if (!jsonOutput) return null;
+
+    const parsed = JSON.parse(jsonOutput);
+    const schemes =
+      parsed.project?.schemes ??
+      parsed.workspace?.schemes ??
+      parsed.project?.targets ??
+      [];
+
+    const uniqueSchemes = [...new Set(schemes)].filter(Boolean);
+    if (!uniqueSchemes.length) return null;
+
+    const entries = uniqueSchemes
+      .map((schemeName) => {
+        const buildConfigurations = ['Release', 'Profile', 'Debug'];
+        const buildSettingsOutput = buildConfigurations
+          .map((configuration) => ({
+            configuration,
+            output: runAndCapture(
+              `xcodebuild -showBuildSettings ${buildContainerArgs} -scheme ${quoteShellArg(
+                schemeName
+              )} -configuration ${quoteShellArg(configuration)}`,
+              projectRoot
+            ),
+          }))
+          .find((item) => item.output)?.output;
+
+        if (!buildSettingsOutput) return null;
+
+        const settings = parseXcodebuildSettings(buildSettingsOutput);
+        const appId = isResolvedBuildSetting(settings.PRODUCT_BUNDLE_IDENTIFIER)
+          ? settings.PRODUCT_BUNDLE_IDENTIFIER
+          : null;
+        const version = isResolvedBuildSetting(settings.MARKETING_VERSION)
+          ? settings.MARKETING_VERSION
+          : null;
+        const targetName =
+          settings.TARGET_NAME || settings.PRODUCT_NAME || schemeName;
+
+        return {
+          name: schemeName,
+          targetName,
+          label: schemeName,
+          appId,
+          version,
+          productName: settings.PRODUCT_NAME || targetName,
+          buildConfiguration: settings.CONFIGURATION || 'Release',
+        };
+      })
+      .filter(Boolean);
+
+    if (!entries.length) return null;
+
+    const dedupedEntries = entries.filter(
+      (entry, index, allEntries) =>
+        allEntries.findIndex(
+          (candidate) =>
+            candidate.name === entry.name && candidate.appId === entry.appId
+        ) === index
+    );
+
+    return {
+      defaultConfig: dedupedEntries[0] ?? null,
+      targets: dedupedEntries,
+    };
+  } catch (_error) {
+    return null;
+  }
 }
 
 function getIosTargetMetadata() {
   const projectFiles = getIosProjectFiles();
   if (!projectFiles) return null;
+
+  const xcodebuildMetadata = getIosSchemeMetadataFromXcodebuild(projectFiles);
+  if (xcodebuildMetadata?.targets?.length) {
+    return xcodebuildMetadata;
+  }
 
   const pbxprojContent = fs.readFileSync(projectFiles.pbxprojPath, 'utf8');
   const configObjects = parsePbxprojObjectsByIsa(
