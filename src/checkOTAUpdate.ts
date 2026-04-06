@@ -141,7 +141,10 @@ export const checkOTAUpdate = async ({
                   { status: 'success' },
                   { headers: { 'Content-Type': 'application/json' } }
                 )
-                .finally(() => AppLoader.hide());
+                .finally(() => {
+                  AppLoader.hide();
+                  onUpdateInstalled?.(updateState);
+                });
             })
             .catch((error) => {
               console.warn(
@@ -149,8 +152,6 @@ export const checkOTAUpdate = async ({
                 error
               );
             });
-
-          onUpdateInstalled?.(updateState);
         },
         updateFail: (error) => {
           axios
