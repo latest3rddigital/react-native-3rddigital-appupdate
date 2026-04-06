@@ -57,6 +57,8 @@ const App = () => {
         key: 'YOUR_PROJECT_KEY',
         iosPackage: 'com.example.ios',
         androidPackage: 'com.example.android',
+        restartAfterInstall: true,
+        restartDelay: 1000,
         loaderOptions: {
           text: 'Downloading update...',
           showProgress: true,
@@ -99,6 +101,8 @@ Options:
 | `key`            | string | ✅       | Project key to identify the app on your update server |
 | `iosPackage`     | string | ✅       | iOS bundle/package identifier                         |
 | `androidPackage` | string | ✅       | Android bundle/package identifier                     |
+| `restartAfterInstall` | boolean | ❌ | Whether the app should restart automatically after OTA install. Defaults to `true` |
+| `restartDelay`   | number | ❌       | Delay in milliseconds before restart after install. Defaults to `1000` |
 | `loaderOptions`  | object | ❌       | Customize loader UI (see below)                       |
 | `dialogOptions`  | object | ❌       | Customize alert dialog UI (see below)                 |
 

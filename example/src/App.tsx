@@ -23,6 +23,8 @@ const App = () => {
         key: 'YOUR_PROJECT_KEY',
         iosPackage: 'com.example.ios',
         androidPackage: 'com.example.android',
+        restartAfterInstall: true,
+        restartDelay: 1000,
         loaderOptions: {
           text: 'Downloading update...',
           showProgress: true,

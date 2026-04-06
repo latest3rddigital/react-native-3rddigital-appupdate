@@ -13,6 +13,8 @@ export type OTAUpdateProps = {
   loaderOptions?: LoaderOptions;
   dialogOptions?: Omit<DialogOptions, 'onConfirm' | 'onCancel'>;
   baseUrl: string;
+  restartAfterInstall?: boolean;
+  restartDelay?: number;
 };
 
 export type OTAUpdateSuccessState = {
@@ -82,6 +84,8 @@ export const checkOTAUpdate = async ({
   loaderOptions,
   dialogOptions,
   baseUrl,
+  restartAfterInstall = true,
+  restartDelay = 1000,
 }: OTAUpdateProps) => {
   try {
     const API_URL = baseUrl;
@@ -156,8 +160,8 @@ export const checkOTAUpdate = async ({
             )
             .finally(() => AppLoader.hide());
         },
-        restartAfterInstall: true,
-        restartDelay: 1000,
+        restartAfterInstall,
+        restartDelay,
       });
     };
 
