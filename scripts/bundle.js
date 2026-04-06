@@ -349,6 +349,14 @@ function choosePreferredBuildConfig(buildConfigs, preferredNames = []) {
   return buildConfigs[0] ?? null;
 }
 
+function buildIosEntryLabel({ targetName, buildConfiguration, appId }) {
+  const buildConfigurationLabel = buildConfiguration
+    ? ` [${buildConfiguration}]`
+    : '';
+  const appIdLabel = appId ? ` (${appId})` : '';
+  return `${targetName}${buildConfigurationLabel}${appIdLabel}`;
+}
+
 function getAndroidBuildGradlePath(projectRoot) {
   return findFirstExistingPath([
     path.join(projectRoot, 'android', 'app', 'build.gradle'),
@@ -516,6 +524,18 @@ function getIosTargetMetadata() {
     ])
   );
 
+  const preferredConfigNames = ['Release', 'Profile', 'Debug'];
+  const fallbackConfigGroups = new Map();
+
+  for (const config of configMap.values()) {
+    const appIdKey = config.appId ?? `no-app-id::${config.id}`;
+    if (!fallbackConfigGroups.has(appIdKey)) {
+      fallbackConfigGroups.set(appIdKey, []);
+    }
+
+    fallbackConfigGroups.get(appIdKey).push(config);
+  }
+
   const targetObjects = parsePbxprojObjectsByIsa(
     pbxprojContent,
     'PBXNativeTarget'
@@ -560,7 +580,7 @@ function getIosTargetMetadata() {
         configsByAppId.get(appIdKey).push(buildConfig);
       }
 
-      const preferredConfigNames = [
+      const targetPreferredConfigNames = [
         configList?.defaultName,
         'Release',
         'Profile',
@@ -574,28 +594,27 @@ function getIosTargetMetadata() {
                 buildConfigsWithAppId.length
                   ? buildConfigsWithAppId
                   : buildConfigs,
-                preferredConfigNames
+                targetPreferredConfigNames
               ),
             ].filter(Boolean)
           : Array.from(configsByAppId.values())
               .map((configGroup) =>
-                choosePreferredBuildConfig(configGroup, preferredConfigNames)
+                choosePreferredBuildConfig(
+                  configGroup,
+                  targetPreferredConfigNames
+                )
               )
               .filter(Boolean);
 
       return distinctConfigs.map((selectedConfig) => {
-        const buildConfigurationLabel = selectedConfig.name
-          ? ` [${selectedConfig.name}]`
-          : '';
-
-        const appIdLabel = selectedConfig.appId
-          ? ` (${selectedConfig.appId})`
-          : '';
-
         return {
           name: `${targetName}::${selectedConfig.appId ?? selectedConfig.id ?? 'no-app-id'}`,
           targetName,
-          label: `${targetName}${buildConfigurationLabel}${appIdLabel}`,
+          label: buildIosEntryLabel({
+            targetName,
+            buildConfiguration: selectedConfig.name ?? null,
+            appId: selectedConfig.appId ?? null,
+          }),
           appId: selectedConfig.appId ?? null,
           version: selectedConfig.version ?? null,
           productName: selectedConfig.productName ?? targetName,
@@ -616,9 +635,62 @@ function getIosTargetMetadata() {
       ) === index
   );
 
+  const existingAppIds = new Set(
+    uniqueTargets.map((target) => target.appId).filter(Boolean)
+  );
+
+  const fallbackEntries = Array.from(fallbackConfigGroups.entries())
+    .filter(([appId]) => !existingAppIds.has(appId))
+    .map(([appId, configs]) => {
+      const selectedConfig = choosePreferredBuildConfig(
+        configs,
+        preferredConfigNames
+      );
+      if (!selectedConfig) return null;
+
+      const targetName =
+        selectedConfig.productName &&
+        selectedConfig.productName !== '$(TARGET_NAME)'
+          ? selectedConfig.productName
+          : 'Default';
+
+      return {
+        name: `${targetName}::${appId}`,
+        targetName,
+        label: buildIosEntryLabel({
+          targetName,
+          buildConfiguration: selectedConfig.name ?? null,
+          appId: selectedConfig.appId ?? null,
+        }),
+        appId: selectedConfig.appId ?? null,
+        version: selectedConfig.version ?? null,
+        productName: selectedConfig.productName ?? targetName,
+        buildConfiguration: selectedConfig.name ?? null,
+      };
+    })
+    .filter(Boolean);
+
+  const mergedTargets = [...uniqueTargets, ...fallbackEntries];
+
+  if (!mergedTargets.length) {
+    const fallbackVersionMatch = pbxprojContent.match(
+      /MARKETING_VERSION\s*=\s*([^;]+);/
+    );
+
+    return {
+      defaultConfig: {
+        name: 'default',
+        label: 'Default',
+        appId: null,
+        version: cleanPbxString(fallbackVersionMatch?.[1]) ?? null,
+      },
+      targets: [],
+    };
+  }
+
   return {
-    defaultConfig: uniqueTargets[0] ?? null,
-    targets: uniqueTargets,
+    defaultConfig: mergedTargets[0] ?? null,
+    targets: mergedTargets,
   };
 }
 
