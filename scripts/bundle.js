@@ -340,6 +340,15 @@ function isAppLikeTarget(targetName, productType) {
   ].some((suffix) => targetName.endsWith(suffix));
 }
 
+function choosePreferredBuildConfig(buildConfigs, preferredNames = []) {
+  for (const preferredName of preferredNames) {
+    const match = buildConfigs.find((config) => config.name === preferredName);
+    if (match) return match;
+  }
+
+  return buildConfigs[0] ?? null;
+}
+
 function getAndroidBuildGradlePath(projectRoot) {
   return findFirstExistingPath([
     path.join(projectRoot, 'android', 'app', 'build.gradle'),
@@ -534,34 +543,61 @@ function getIosTargetMetadata() {
           .map((configId) => configMap.get(configId))
           .filter(Boolean) ?? [];
 
-      const preferredConfig =
-        buildConfigs.find(
-          (config) => config.name === configList?.defaultName
-        ) ??
-        buildConfigs.find((config) => config.name === 'Release') ??
-        buildConfigs[0];
+      if (!buildConfigs.length) return null;
 
-      if (!preferredConfig) return null;
+      const configsByIdentity = new Map();
 
-      const buildConfigurationLabel = preferredConfig.name
-        ? ` [${preferredConfig.name}]`
-        : '';
+      for (const buildConfig of buildConfigs) {
+        const identity = `${buildConfig.appId ?? 'no-app-id'}::${buildConfig.name ?? 'no-config-name'}`;
+        if (!configsByIdentity.has(identity)) {
+          configsByIdentity.set(identity, []);
+        }
 
-      return {
-        name: targetName,
-        label: `${targetName}${buildConfigurationLabel}`,
-        appId: preferredConfig.appId ?? null,
-        version: preferredConfig.version ?? null,
-        productName: preferredConfig.productName ?? targetName,
-        buildConfiguration: preferredConfig.name ?? null,
-      };
+        configsByIdentity.get(identity).push(buildConfig);
+      }
+
+      const distinctConfigs = Array.from(configsByIdentity.values())
+        .map((configGroup) =>
+          choosePreferredBuildConfig(configGroup, [
+            configList?.defaultName,
+            'Release',
+            'Profile',
+            'Debug',
+          ])
+        )
+        .filter(Boolean);
+
+      return distinctConfigs.map((selectedConfig) => {
+        const buildConfigurationLabel = selectedConfig.name
+          ? ` [${selectedConfig.name}]`
+          : '';
+
+        const appIdLabel = selectedConfig.appId
+          ? ` (${selectedConfig.appId})`
+          : '';
+
+        return {
+          name: `${targetName}::${selectedConfig.name ?? 'default'}::${selectedConfig.appId ?? 'no-app-id'}`,
+          targetName,
+          label: `${targetName}${buildConfigurationLabel}${appIdLabel}`,
+          appId: selectedConfig.appId ?? null,
+          version: selectedConfig.version ?? null,
+          productName: selectedConfig.productName ?? targetName,
+          buildConfiguration: selectedConfig.name ?? null,
+        };
+      });
     })
+    .flat()
     .filter(Boolean);
 
   const uniqueTargets = targets.filter(
     (target, index, allTargets) =>
-      allTargets.findIndex((candidate) => candidate.name === target.name) ===
-      index
+      allTargets.findIndex(
+        (candidate) =>
+          candidate.targetName === target.targetName &&
+          candidate.appId === target.appId &&
+          candidate.buildConfiguration === target.buildConfiguration
+      ) === index
   );
 
   return {

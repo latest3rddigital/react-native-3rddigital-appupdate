@@ -33,14 +33,17 @@ cd ios && pod install
 
 ```sh
 import React, { useEffect } from 'react';
-import { Alert, View, Text } from 'react-native';
+import { Alert, Button, View, Text } from 'react-native';
 import {
   OTAProvider,
   checkOTAUpdate,
   consumeOTAUpdateSuccessState,
+  reloadAppForOTAUpdate,
 } from 'react-native-3rddigital-appupdate';
 
 const App = () => {
+  const [pendingUpdate, setPendingUpdate] = React.useState(null);
+
   useEffect(() => {
     const initializeOTAUpdate = async () => {
       const updateState = await consumeOTAUpdateSuccessState();
@@ -57,8 +60,11 @@ const App = () => {
         key: 'YOUR_PROJECT_KEY',
         iosPackage: 'com.example.ios',
         androidPackage: 'com.example.android',
-        restartAfterInstall: true,
+        restartAfterInstall: false,
         restartDelay: 1000,
+        onUpdateInstalled: (state) => {
+          setPendingUpdate(state);
+        },
         loaderOptions: {
           text: 'Downloading update...',
           showProgress: true,
@@ -77,6 +83,12 @@ const App = () => {
     <OTAProvider>
       <View>
         <Text>My App Content</Text>
+        {pendingUpdate ? (
+          <Button
+            title={`Reload to apply OTA v${pendingUpdate.version}`}
+            onPress={reloadAppForOTAUpdate}
+          />
+        ) : null}
       </View>
     </OTAProvider>
   );
@@ -103,6 +115,7 @@ Options:
 | `androidPackage` | string | ✅       | Android bundle/package identifier                     |
 | `restartAfterInstall` | boolean | ❌ | Whether the app should restart automatically after OTA install. Defaults to `true` |
 | `restartDelay`   | number | ❌       | Delay in milliseconds before restart after install. Defaults to `1000` |
+| `onUpdateInstalled` | `(state: OTAUpdateSuccessState) => void` | ❌ | Called after the OTA bundle is installed, useful when `restartAfterInstall` is `false` and you want to trigger reload manually |
 | `loaderOptions`  | object | ❌       | Customize loader UI (see below)                       |
 | `dialogOptions`  | object | ❌       | Customize alert dialog UI (see below)                 |
 
@@ -124,6 +137,11 @@ Returns:
 | `version`     | number   | Installed OTA bundle version              |
 | `appVersion`  | string   | Native app version associated with bundle |
 | `installedAt` | string   | ISO timestamp when install completed      |
+
+🔹 reloadAppForOTAUpdate()
+
+- Manually reloads the app so an installed OTA bundle becomes active.
+- Useful together with `restartAfterInstall: false` and `onUpdateInstalled`.
 
 🔹 Loader (AppLoader)
 

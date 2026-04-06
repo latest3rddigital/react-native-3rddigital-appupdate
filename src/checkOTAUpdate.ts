@@ -15,6 +15,7 @@ export type OTAUpdateProps = {
   baseUrl: string;
   restartAfterInstall?: boolean;
   restartDelay?: number;
+  onUpdateInstalled?: (state: OTAUpdateSuccessState) => void;
 };
 
 export type OTAUpdateSuccessState = {
@@ -77,6 +78,10 @@ export const consumeOTAUpdateSuccessState = async () => {
   return state;
 };
 
+export const reloadAppForOTAUpdate = () => {
+  hotUpdate.resetApp();
+};
+
 export const checkOTAUpdate = async ({
   key,
   iosPackage,
@@ -86,6 +91,7 @@ export const checkOTAUpdate = async ({
   baseUrl,
   restartAfterInstall = true,
   restartDelay = 1000,
+  onUpdateInstalled,
 }: OTAUpdateProps) => {
   try {
     const API_URL = baseUrl;
@@ -120,12 +126,14 @@ export const checkOTAUpdate = async ({
           }
         },
         updateSuccess: () => {
-          persistOTAUpdateSuccessState({
+          const updateState = {
             bundleId,
             version,
             appVersion: bundleAppVersion,
             installedAt: new Date().toISOString(),
-          })
+          };
+
+          persistOTAUpdateSuccessState(updateState)
             .finally(() => {
               axios
                 .post(
@@ -141,6 +149,8 @@ export const checkOTAUpdate = async ({
                 error
               );
             });
+
+          onUpdateInstalled?.(updateState);
         },
         updateFail: (error) => {
           axios

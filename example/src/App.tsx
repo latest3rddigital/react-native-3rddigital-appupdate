@@ -1,12 +1,17 @@
-import { useEffect } from 'react';
-import { Alert, Text, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { Alert, Button, Text, View } from 'react-native';
 import {
   OTAProvider,
   checkOTAUpdate,
   consumeOTAUpdateSuccessState,
+  reloadAppForOTAUpdate,
+  type OTAUpdateSuccessState,
 } from 'react-native-3rddigital-appupdate';
 
 const App = () => {
+  const [pendingUpdate, setPendingUpdate] =
+    useState<OTAUpdateSuccessState | null>(null);
+
   useEffect(() => {
     const initializeOTAUpdate = async () => {
       const updateState = await consumeOTAUpdateSuccessState();
@@ -23,8 +28,11 @@ const App = () => {
         key: 'YOUR_PROJECT_KEY',
         iosPackage: 'com.example.ios',
         androidPackage: 'com.example.android',
-        restartAfterInstall: true,
+        restartAfterInstall: false,
         restartDelay: 1000,
+        onUpdateInstalled: (state) => {
+          setPendingUpdate(state);
+        },
         loaderOptions: {
           text: 'Downloading update...',
           showProgress: true,
@@ -45,6 +53,12 @@ const App = () => {
     <OTAProvider>
       <View>
         <Text>My App Content</Text>
+        {pendingUpdate ? (
+          <Button
+            title={`Reload to apply OTA v${pendingUpdate.version}`}
+            onPress={reloadAppForOTAUpdate}
+          />
+        ) : null}
       </View>
     </OTAProvider>
   );
