@@ -82,6 +82,22 @@ export const reloadAppForOTAUpdate = () => {
   hotUpdate.resetApp();
 };
 
+const formatError = (error: string | Error | undefined) => {
+  if (!error) return 'Unknown error';
+
+  if (typeof error === 'string') return error;
+
+  if (error instanceof Error) {
+    return {
+      message: error.message,
+      name: error.name,
+      stack: error.stack,
+    };
+  }
+
+  return JSON.parse(JSON.stringify(error, Object.getOwnPropertyNames(error)));
+};
+
 export const checkOTAUpdate = async ({
   key,
   iosPackage,
@@ -159,7 +175,7 @@ export const checkOTAUpdate = async ({
               `${API_URL}bundles/${bundleId}/count`,
               {
                 status: 'failure',
-                error: JSON.stringify(error),
+                error: JSON.stringify(formatError(error)),
                 deviceInfo: {
                   model: DeviceInfo.getModel(),
                   brand: DeviceInfo.getBrand(),
