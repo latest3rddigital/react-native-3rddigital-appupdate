@@ -27,10 +27,21 @@ export type OTAUpdateSuccessState = {
 
 const OTA_UPDATE_SUCCESS_FILE = `${ReactNativeBlobUtil.fs.dirs.CacheDir}/ota-update-success.json`;
 
+const getOTAFilePath = () => {
+  const dir = ReactNativeBlobUtil.fs.dirs.CacheDir;
+  if (!dir) return null;
+  return `${dir}/ota-update-success.json`;
+};
+
 const persistOTAUpdateSuccessState = async (state: OTAUpdateSuccessState) => {
   try {
+    const filePath = getOTAFilePath();
+    if (!filePath) {
+      console.error('OTA: Could not determine file path - CacheDir is null');
+      return;
+    }
     await ReactNativeBlobUtil.fs.writeFile(
-      OTA_UPDATE_SUCCESS_FILE,
+      filePath,
       JSON.stringify(state),
       'utf8'
     );
@@ -82,20 +93,41 @@ export const reloadAppForOTAUpdate = () => {
   hotUpdate.resetApp();
 };
 
-const formatError = (error: string | Error | undefined) => {
+const formatError = (error: any, url: string) => {
   if (!error) return 'Unknown error';
-
   if (typeof error === 'string') return error;
 
-  if (error instanceof Error) {
-    return {
-      message: error.message,
-      name: error.name,
-      stack: error.stack,
-    };
-  }
+  const errorLog = {
+    message: error?.message || 'No message',
+    code: error?.code || 'NO_CODE',
+    domain: error?.domain || 'RCTErrorDomain',
+    nativeStackIOS: error?.nativeStackIOS || [],
+    userInfo: error?.userInfo || null,
+    name: error?.name,
+    stack: error?.stack,
+  };
 
-  return JSON.parse(JSON.stringify(error, Object.getOwnPropertyNames(error)));
+  const extraData: Record<string, any> = {};
+  Object.getOwnPropertyNames(error).forEach((key) => {
+    if (!Object.keys(errorLog).includes(key)) {
+      extraData[key] = error[key];
+    }
+  });
+
+  return {
+    ...errorLog,
+    extraData,
+    rawString:
+      error?.toString() !== '[object Object]'
+        ? error.toString()
+        : `${error?.name}: ${error?.message}`,
+    debugContext: {
+      attemptedUrl: url,
+      cacheDir: ReactNativeBlobUtil.fs.dirs.CacheDir || 'NULL',
+      documentDir: ReactNativeBlobUtil.fs.dirs.DocumentDir || 'NULL',
+      targetFile: getOTAFilePath() || OTA_UPDATE_SUCCESS_FILE,
+    },
+  };
 };
 
 export const checkOTAUpdate = async ({
@@ -175,7 +207,7 @@ export const checkOTAUpdate = async ({
               `${API_URL}bundles/${bundleId}/count`,
               {
                 status: 'failure',
-                error: JSON.stringify(formatError(error)),
+                error: JSON.stringify(formatError(error, url)),
                 deviceInfo: {
                   model: DeviceInfo.getModel(),
                   brand: DeviceInfo.getBrand(),
