@@ -95,32 +95,31 @@ export const reloadAppForOTAUpdate = () => {
 
 const formatError = (error: any, url: string) => {
   if (!error) return 'Unknown error';
-  if (typeof error === 'string') return error;
+
+  let parsedError = error;
+
+  if (typeof error === 'string') {
+    try {
+      parsedError = JSON.parse(error);
+    } catch {
+      parsedError = { message: error };
+    }
+  }
 
   const errorLog = {
-    message: error?.message || 'No message',
-    code: error?.code || 'NO_CODE',
-    domain: error?.domain || 'RCTErrorDomain',
-    nativeStackIOS: error?.nativeStackIOS || [],
-    userInfo: error?.userInfo || null,
-    name: error?.name,
-    stack: error?.stack,
+    message: parsedError?.message || 'No message',
+    code: parsedError?.code || 'NO_CODE',
+    domain: parsedError?.domain || 'RCTErrorDomain',
+    nativeStackIOS: parsedError?.nativeStackIOS || [],
+    userInfo: parsedError?.userInfo || null,
+    name: parsedError?.name || 'Error',
+    stack: parsedError?.stack || 'No Stack',
   };
-
-  const extraData: Record<string, any> = {};
-  Object.getOwnPropertyNames(error).forEach((key) => {
-    if (!Object.keys(errorLog).includes(key)) {
-      extraData[key] = error[key];
-    }
-  });
 
   return {
     ...errorLog,
-    extraData,
-    rawString:
-      error?.toString() !== '[object Object]'
-        ? error.toString()
-        : `${error?.name}: ${error?.message}`,
+    parsedError: JSON.stringify(parsedError),
+    rawString: typeof error === 'string' ? error : JSON.stringify(error),
     debugContext: {
       attemptedUrl: url,
       cacheDir: ReactNativeBlobUtil.fs.dirs.CacheDir || 'NULL',
