@@ -2,6 +2,11 @@
 #
 .DS_Store
 
+# Env
+.env
+.env.*
+!.env.example
+
 # XDE
 .expo/
 

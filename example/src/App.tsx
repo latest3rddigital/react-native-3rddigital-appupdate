@@ -25,6 +25,7 @@ const App = () => {
 
       await checkOTAUpdate({
         baseUrl: 'https://your-api-url.com',
+        apiKey: 'YOUR_API_KEY',
         key: 'YOUR_PROJECT_KEY',
         iosPackage: 'com.example.ios',
         androidPackage: 'com.example.android',

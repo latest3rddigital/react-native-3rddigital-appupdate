@@ -13,6 +13,7 @@ export type OTAUpdateProps = {
   loaderOptions?: LoaderOptions;
   dialogOptions?: Omit<DialogOptions, 'onConfirm' | 'onCancel'>;
   baseUrl: string;
+  apiKey: string;
   restartAfterInstall?: boolean;
   restartDelay?: number;
   onUpdateInstalled?: (state: OTAUpdateSuccessState) => void;
@@ -94,16 +95,72 @@ export const reloadAppForOTAUpdate = () => {
 };
 
 const formatError = (error: any, url: string) => {
-  if (!error) return 'Unknown error';
+  if (!error) {
+    return {
+      message: 'Unknown error',
+      code: 'UNKNOWN_ERROR',
+      domain: 'OTAUpdateError',
+      nativeStackIOS: [],
+      userInfo: null,
+      name: 'Error',
+      stack: 'No Stack',
+      parsedError: '{}',
+      rawString: 'Unknown error',
+      debugContext: {
+        attemptedUrl: url,
+        cacheDir: ReactNativeBlobUtil.fs.dirs.CacheDir || 'NULL',
+        documentDir: ReactNativeBlobUtil.fs.dirs.DocumentDir || 'NULL',
+        targetFile: getOTAFilePath() || OTA_UPDATE_SUCCESS_FILE,
+      },
+    };
+  }
 
   let parsedError = error;
+  let rawString = '';
 
   if (typeof error === 'string') {
+    rawString = error;
     try {
       parsedError = JSON.parse(error);
     } catch {
       parsedError = { message: error };
     }
+  } else {
+    rawString = JSON.stringify(error);
+  }
+
+  const isEmptyObject =
+    parsedError &&
+    typeof parsedError === 'object' &&
+    !Array.isArray(parsedError) &&
+    Object.keys(parsedError).length === 0;
+
+  if (isEmptyObject) {
+    parsedError = {
+      message:
+        'An error occurred during the OTA update download. The original Error object was stringified to {} by the OTA library, losing its properties (message, stack, name are non-enumerable). Check native logs for the actual error.',
+      code: 'ERROR_STRINGIFIED',
+      domain: 'OTAUpdateError',
+      nativeStackIOS: [],
+      userInfo: {
+        rawError: rawString,
+        hint: 'The error was an Error object that was stringified to {} by react-native-ota-hot-update. Error properties are non-enumerable and lost during JSON.stringify.',
+      },
+      name: 'Error',
+      stack: 'No Stack',
+    };
+  }
+
+  if (typeof parsedError === 'string') {
+    parsedError = {
+      message: parsedError,
+      code: 'STRING_ERROR',
+      domain: 'OTAUpdateError',
+      nativeStackIOS: [],
+      userInfo: null,
+      name: 'Error',
+      stack: 'No Stack',
+    };
   }
 
   const errorLog = {
@@ -119,13 +176,20 @@ const formatError = (error: any, url: string) => {
   return {
     ...errorLog,
     parsedError: JSON.stringify(parsedError),
-    rawString: typeof error === 'string' ? error : JSON.stringify(error),
+    rawString: rawString || JSON.stringify(error),
     debugContext: {
       attemptedUrl: url,
       cacheDir: ReactNativeBlobUtil.fs.dirs.CacheDir || 'NULL',
       documentDir: ReactNativeBlobUtil.fs.dirs.DocumentDir || 'NULL',
       targetFile: getOTAFilePath() || OTA_UPDATE_SUCCESS_FILE,
     },
+  };
+};
+
+const getHeaders = (apiKey: string) => {
+  return {
+    'Content-Type': 'application/json',
+    'Api-Key': apiKey,
   };
 };
 
@@ -136,14 +200,17 @@ export const checkOTAUpdate = async ({
   loaderOptions,
   dialogOptions,
   baseUrl,
+  apiKey,
   restartAfterInstall = true,
   restartDelay = 1000,
   onUpdateInstalled,
 }: OTAUpdateProps) => {
   try {
     const API_URL = baseUrl;
+    const headers = getHeaders(apiKey);
     const response = await axios.get(
-      `${API_URL}projects/get-bundle?key=${key}&iosPackage=${iosPackage}&androidPackage=${androidPackage}`
+      `${API_URL}projects/get-bundle?key=${key}&iosPackage=${iosPackage}&androidPackage=${androidPackage}`,
+      { headers }
     );
 
     const currentVersion = await hotUpdate.getCurrentVersion();
@@ -186,7 +253,7 @@ export const checkOTAUpdate = async ({
                 .post(
                   `${API_URL}bundles/${bundleId}/count`,
                   { status: 'success' },
-                  { headers: { 'Content-Type': 'application/json' } }
+                  { headers }
                 )
                 .finally(() => {
                   AppLoader.hide();
@@ -214,7 +281,7 @@ export const checkOTAUpdate = async ({
                   systemVersion: DeviceInfo.getSystemVersion(),
                 },
               },
-              { headers: { 'Content-Type': 'application/json' } }
+              { headers }
             )
             .finally(() => AppLoader.hide());
         },

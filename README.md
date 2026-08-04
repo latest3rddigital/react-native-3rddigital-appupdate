@@ -57,6 +57,7 @@ const App = () => {
 
       await checkOTAUpdate({
         baseUrl: 'https://your-api-url.com',
+        apiKey: 'YOUR_API_KEY',
         key: 'YOUR_PROJECT_KEY',
         iosPackage: 'com.example.ios',
         androidPackage: 'com.example.android',
@@ -107,17 +108,18 @@ If you already use a toast library, replace `Alert.alert(...)` with your toast c
 
 Options:
 
-| Key              | Type   | Required | Description                                           |
-| ---------------- | ------ | -------- | ----------------------------------------------------- |
-| `baseUrl`        | string | ✅       | Base url for app update                               |
-| `key`            | string | ✅       | Project key to identify the app on your update server |
-| `iosPackage`     | string | ✅       | iOS bundle/package identifier                         |
-| `androidPackage` | string | ✅       | Android bundle/package identifier                     |
-| `restartAfterInstall` | boolean | ❌ | Whether the app should restart automatically after OTA install. Defaults to `true` |
-| `restartDelay`   | number | ❌       | Delay in milliseconds before restart after install. Defaults to `1000` |
-| `onUpdateInstalled` | `(state: OTAUpdateSuccessState) => void` | ❌ | Called after the OTA bundle is installed, useful when `restartAfterInstall` is `false` and you want to trigger reload manually |
-| `loaderOptions`  | object | ❌       | Customize loader UI (see below)                       |
-| `dialogOptions`  | object | ❌       | Customize alert dialog UI (see below)                 |
+| Key                   | Type                                     | Required | Description                                                                                                                    |
+| --------------------- | ---------------------------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| `baseUrl`             | string                                   | ✅       | Base url for app update                                                                                                        |
+| `apiKey`              | string                                   | ✅       | API key sent in the `Api-Key` header for authentication                                                                        |
+| `key`                 | string                                   | ✅       | Project key to identify the app on your update server                                                                          |
+| `iosPackage`          | string                                   | ✅       | iOS bundle/package identifier                                                                                                  |
+| `androidPackage`      | string                                   | ✅       | Android bundle/package identifier                                                                                              |
+| `restartAfterInstall` | boolean                                  | ❌       | Whether the app should restart automatically after OTA install. Defaults to `true`                                             |
+| `restartDelay`        | number                                   | ❌       | Delay in milliseconds before restart after install. Defaults to `1000`                                                         |
+| `onUpdateInstalled`   | `(state: OTAUpdateSuccessState) => void` | ❌       | Called after the OTA bundle is installed, useful when `restartAfterInstall` is `false` and you want to trigger reload manually |
+| `loaderOptions`       | object                                   | ❌       | Customize loader UI (see below)                                                                                                |
+| `dialogOptions`       | object                                   | ❌       | Customize alert dialog UI (see below)                                                                                          |
 
 🔹 OTAProvider
 
@@ -131,12 +133,12 @@ Options:
 
 Returns:
 
-| Key           | Type     | Description                               |
-| ------------- | -------- | ----------------------------------------- |
-| `bundleId`    | string   | Bundle identifier returned by your server |
-| `version`     | number   | Installed OTA bundle version              |
-| `appVersion`  | string   | Native app version associated with bundle |
-| `installedAt` | string   | ISO timestamp when install completed      |
+| Key           | Type   | Description                               |
+| ------------- | ------ | ----------------------------------------- |
+| `bundleId`    | string | Bundle identifier returned by your server |
+| `version`     | number | Installed OTA bundle version              |
+| `appVersion`  | string | Native app version associated with bundle |
+| `installedAt` | string | ISO timestamp when install completed      |
 
 🔹 reloadAppForOTAUpdate()
 
@@ -186,7 +188,20 @@ Props (DialogOptions):
 
 - This package also provides a CLI for building and uploading OTA bundles.
 
-Build & Upload
+### Environment Variables
+
+The CLI reads the following environment variables from your `.env` file:
+
+| Variable                          | Description                                                |
+| --------------------------------- | ---------------------------------------------------------- |
+| `APPUPDATE_BASE_URL`              | Base URL of your update server                             |
+| `APPUPDATE_API_KEY`               | API key used for authentication (pre-filled in the prompt) |
+| `APPUPDATE_AWS_REGION`            | AWS region for S3 uploads                                  |
+| `APPUPDATE_AWS_ACCESS_KEY_ID`     | AWS access key ID for S3 uploads                           |
+| `APPUPDATE_AWS_SECRET_ACCESS_KEY` | AWS secret access key for S3 uploads                       |
+| `APPUPDATE_AWS_BUCKET_NAME`       | AWS S3 bucket name for bundle storage                      |
+
+### Build & Upload
 
 ```sh
 npx appupdate android

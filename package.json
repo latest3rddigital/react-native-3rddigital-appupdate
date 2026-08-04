@@ -165,7 +165,7 @@
     "form-data": "^4.0.4",
     "react-native-blob-util": "^0.24.7",
     "react-native-device-info": "^15.0.2",
-    "react-native-ota-hot-update": "^2.4.3",
+    "react-native-ota-hot-update": "^2.4.4",
     "uuid": "^13.0.0"
   },
   "bin": {

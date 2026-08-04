@@ -9,6 +9,7 @@ const { PutObjectCommand, S3Client } = require('@aws-sdk/client-s3');
 const { v4: uuidv4 } = require('uuid');
 
 const APPUPDATE_BASE_URL = process.env.APPUPDATE_BASE_URL;
+const APPUPDATE_API_KEY = process.env.APPUPDATE_API_KEY;
 const APPUPDATE_AWS_REGION = process.env.APPUPDATE_AWS_REGION;
 const APPUPDATE_AWS_ACCESS_KEY_ID = process.env.APPUPDATE_AWS_ACCESS_KEY_ID;
 const APPUPDATE_AWS_SECRET_ACCESS_KEY =
@@ -108,6 +109,7 @@ async function uploadBundle({ filePath, platform, config }) {
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${config.API_TOKEN}`,
+        'Api-Key': config.API_KEY,
       },
     });
 
