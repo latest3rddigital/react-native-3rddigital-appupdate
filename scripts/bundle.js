@@ -109,7 +109,7 @@ async function uploadBundle({ filePath, platform, config }) {
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${config.API_TOKEN}`,
-        'Api-Key': config.API_KEY,
+        'Api-Key': APPUPDATE_API_KEY,
       },
     });
 
